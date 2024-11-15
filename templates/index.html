@@ -98,29 +98,12 @@
         #read_text:hover {
             background-color: #218838;
         }
-
-        #spinner {
-            display: none;
-            border: 8px solid #f3f3f3;
-            border-top: 8px solid #007bff;
-            border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
     </style>
 </head>
 <body>
     <div id="title">ReadEase - Text Recognition & Speech</div>
     <video id="video" autoplay></video>
     <button id="capture">Capture Image</button>
-    <div id="spinner"></div>
     <img id="captured_image" style="display: none;">
     <div id="extracted_text">Extracted text will appear here.</div>
     <button id="read_text" style="display: none;">Read Text Aloud</button>
@@ -132,7 +115,6 @@
         const capturedImage = document.getElementById('captured_image');
         const extractedTextDiv = document.getElementById('extracted_text');
         const readTextButton = document.getElementById('read_text');
-        const spinner = document.getElementById('spinner');
         let isProcessing = false;
 
         // Access the user's webcam
@@ -152,7 +134,7 @@
             }
             
             isProcessing = true;
-            spinner.style.display = 'block';
+            extractedTextDiv.innerHTML = `<p style="color: blue;">Processing... please wait.</p>`;
             const context = canvas.getContext('2d');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -172,7 +154,6 @@
             .then(response => response.json())
             .then(data => {
                 isProcessing = false;
-                spinner.style.display = 'none';
                 if (data.error) {
                     extractedTextDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
                 } else {
@@ -182,7 +163,6 @@
             })
             .catch(error => {
                 isProcessing = false;
-                spinner.style.display = 'none';
                 extractedTextDiv.innerHTML = `<p style="color: red;">Error: ${error}</p>`;
             });
         });
