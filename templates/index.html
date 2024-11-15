@@ -113,8 +113,7 @@
         const extractedTextDiv = document.getElementById('extracted_text');
         const readTextButton = document.getElementById('read_text');
         let isRequestInProgress = false;
-        let cooldownTime = 5000; // 5 seconds cooldown time between requests
-        let lastRequestTime = 0;
+        let cooldownTime = 3000; // 3 seconds cooldown time between requests
     
         // Access the user's webcam
         navigator.mediaDevices.getUserMedia({ video: true })
@@ -127,20 +126,12 @@
     
         // Capture the image from the webcam
         captureButton.addEventListener('click', () => {
-            const currentTime = new Date().getTime();
-    
             if (isRequestInProgress) {
-                alert("Please wait for the current request to complete.");
-                return;
-            }
-    
-            if (currentTime - lastRequestTime < cooldownTime) {
-                alert("Please wait a few seconds before trying again.");
+                extractedTextDiv.innerHTML = `<p style="color: red;">Please wait for the current request to complete...</p>`;
                 return;
             }
     
             isRequestInProgress = true;
-            lastRequestTime = currentTime;
     
             const context = canvas.getContext('2d');
             canvas.width = video.videoWidth;
@@ -172,6 +163,10 @@
             })
             .finally(() => {
                 isRequestInProgress = false;
+                setTimeout(() => {
+                    // Enable capture button after cooldown time
+                    isRequestInProgress = false;
+                }, cooldownTime);
             });
         });
     
@@ -199,6 +194,7 @@
             });
         });
     </script>
+    
     
     
 </body>
