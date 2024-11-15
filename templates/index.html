@@ -20,27 +20,6 @@
             box-sizing: border-box;
         }
 
-        <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ReadEase - Modern Look</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #f0f2f5;
-            color: #333;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
-
         #title {
             font-size: 3em;
             font-weight: 700;
@@ -133,9 +112,7 @@
         const capturedImage = document.getElementById('captured_image');
         const extractedTextDiv = document.getElementById('extracted_text');
         const readTextButton = document.getElementById('read_text');
-        let isRequestInProgress = false;
-        let lastRequestTime = 0;
-        const requestCooldown = 5000; // 5 seconds cooldown time
+        let isProcessing = false;
 
         // Access the user's webcam
         navigator.mediaDevices.getUserMedia({ video: true })
@@ -148,18 +125,12 @@
 
         // Capture the image from the webcam
         captureButton.addEventListener('click', () => {
-            const currentTime = Date.now();
-            if (isRequestInProgress) {
-                alert("Please wait for the current request to complete.");
+            if (isProcessing) {
+                extractedTextDiv.innerHTML = `<p style="color: red;">Please wait until the current request completes.</p>`;
                 return;
             }
-            if (currentTime - lastRequestTime < requestCooldown) {
-                alert("Please wait a few seconds before trying again.");
-                return;
-            }
-            isRequestInProgress = true;
-            lastRequestTime = currentTime;
-
+            
+            isProcessing = true;
             const context = canvas.getContext('2d');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
@@ -178,6 +149,7 @@
             })
             .then(response => response.json())
             .then(data => {
+                isProcessing = false;
                 if (data.error) {
                     extractedTextDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
                 } else {
@@ -186,10 +158,8 @@
                 }
             })
             .catch(error => {
+                isProcessing = false;
                 extractedTextDiv.innerHTML = `<p style="color: red;">Error: ${error}</p>`;
-            })
-            .finally(() => {
-                isRequestInProgress = false;
             });
         });
 
@@ -218,10 +188,4 @@
         });
     </script>
 </body>
-</html>   
-    
-</body>
-</html>
-
-</body>
-</html>
+</html>  
