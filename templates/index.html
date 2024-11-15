@@ -113,6 +113,8 @@
         const extractedTextDiv = document.getElementById('extracted_text');
         const readTextButton = document.getElementById('read_text');
         let isRequestInProgress = false;
+        let cooldownTime = 5000; // 5 seconds cooldown time between requests
+        let lastRequestTime = 0;
     
         // Access the user's webcam
         navigator.mediaDevices.getUserMedia({ video: true })
@@ -125,63 +127,52 @@
     
         // Capture the image from the webcam
         captureButton.addEventListener('click', () => {
+            const currentTime = new Date().getTime();
+    
             if (isRequestInProgress) {
                 alert("Please wait for the current request to complete.");
                 return;
             }
     
-            // Set request in progress to true
+            if (currentTime - lastRequestTime < cooldownTime) {
+                alert("Please wait a few seconds before trying again.");
+                return;
+            }
+    
             isRequestInProgress = true;
+            lastRequestTime = currentTime;
     
             const context = canvas.getContext('2d');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+            const dataURL = canvas.toDataURL('image/png');
+            capturedImage.src = dataURL;
+            capturedImage.style.display = 'block';
     
-            try {
-                context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-                const dataURL = canvas.toDataURL('image/png');
-    
-                // Check if dataURL is valid
-                if (!dataURL || dataURL === "data:,") {
-                    throw new Error("Invalid image data. Please try capturing again.");
+            // Send the captured image to the Flask backend for OCR
+            fetch('/process_image', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ image: dataURL })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    extractedTextDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                } else {
+                    extractedTextDiv.innerHTML = `<p><strong>Extracted Text:</strong> ${data.extracted_text}</p>`;
+                    readTextButton.style.display = 'inline-block';
                 }
-    
-                capturedImage.src = dataURL;
-                capturedImage.style.display = 'block';
-    
-                // Send the captured image to the Flask backend for OCR
-                fetch('/process_image', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ image: dataURL })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error("Failed to process the image. Please try again.");
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.error) {
-                        extractedTextDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
-                    } else {
-                        extractedTextDiv.innerHTML = `<p><strong>Extracted Text:</strong> ${data.extracted_text}</p>`;
-                        readTextButton.style.display = 'inline-block';
-                    }
-                })
-                .catch(error => {
-                    extractedTextDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
-                })
-                .finally(() => {
-                    isRequestInProgress = false;
-                });
-    
-            } catch (error) {
+            })
+            .catch(error => {
                 extractedTextDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            })
+            .finally(() => {
                 isRequestInProgress = false;
-            }
+            });
         });
     
         // Read the extracted text aloud
@@ -204,10 +195,11 @@
                 }
             })
             .catch(error => {
-                extractedTextDiv.innerHTML += `<p style="color: red;">Error: ${error}</p>`;
+                extractedTextDiv.innerHTML += `<p style="color: red;">Error: ${error.message}</p>`;
             });
         });
     </script>
+    
     
 </body>
 </html>
