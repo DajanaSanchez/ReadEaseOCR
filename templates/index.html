@@ -19,27 +19,6 @@
             height: 100vh;
             box-sizing: border-box;
         }
-    
-        <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ReadEase - Modern Look</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap">
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #f0f2f5;
-            color: #333;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-        }
 
         #title {
             font-size: 3em;
@@ -134,7 +113,7 @@
         const extractedTextDiv = document.getElementById('extracted_text');
         const readTextButton = document.getElementById('read_text');
         let isRequestInProgress = false;
-
+    
         // Access the user's webcam
         navigator.mediaDevices.getUserMedia({ video: true })
             .then(function(stream) {
@@ -143,48 +122,68 @@
             .catch(function(err) {
                 console.log("An error occurred: " + err);
             });
-
+    
         // Capture the image from the webcam
         captureButton.addEventListener('click', () => {
             if (isRequestInProgress) {
                 alert("Please wait for the current request to complete.");
                 return;
             }
+    
+            // Set request in progress to true
             isRequestInProgress = true;
-
+    
             const context = canvas.getContext('2d');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
-            const dataURL = canvas.toDataURL('image/png');
-            capturedImage.src = dataURL;
-            capturedImage.style.display = 'block';
-
-            // Send the captured image to the Flask backend for OCR
-            fetch('/process_image', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ image: dataURL })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    extractedTextDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
-                } else {
-                    extractedTextDiv.innerHTML = `<p><strong>Extracted Text:</strong> ${data.extracted_text}</p>`;
-                    readTextButton.style.display = 'inline-block';
+    
+            try {
+                context.drawImage(video, 0, 0, video.videoWidth, video.videoHeight);
+                const dataURL = canvas.toDataURL('image/png');
+    
+                // Check if dataURL is valid
+                if (!dataURL || dataURL === "data:,") {
+                    throw new Error("Invalid image data. Please try capturing again.");
                 }
-            })
-            .catch(error => {
-                extractedTextDiv.innerHTML = `<p style="color: red;">Error: ${error}</p>`;
-            })
-            .finally(() => {
+    
+                capturedImage.src = dataURL;
+                capturedImage.style.display = 'block';
+    
+                // Send the captured image to the Flask backend for OCR
+                fetch('/process_image', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ image: dataURL })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Failed to process the image. Please try again.");
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        extractedTextDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                    } else {
+                        extractedTextDiv.innerHTML = `<p><strong>Extracted Text:</strong> ${data.extracted_text}</p>`;
+                        readTextButton.style.display = 'inline-block';
+                    }
+                })
+                .catch(error => {
+                    extractedTextDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                })
+                .finally(() => {
+                    isRequestInProgress = false;
+                });
+    
+            } catch (error) {
+                extractedTextDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
                 isRequestInProgress = false;
-            });
+            }
         });
-
+    
         // Read the extracted text aloud
         readTextButton.addEventListener('click', () => {
             const extractedText = extractedTextDiv.innerText.replace('Extracted Text: ', '');
@@ -209,6 +208,7 @@
             });
         });
     </script>
+    
 </body>
 </html>
 
